@@ -1,0 +1,17 @@
+{
+	"id": "./",
+	"name": "PDF Book Reader Offline",
+	"short_name": "PDF Books",
+	"description": "Đọc PDF offline với hiệu ứng lật trang",
+	"lang": "vi",
+	"start_url": "./",
+	"scope": "./",
+	"display": "standalone",
+	"orientation": "landscape",
+	"background_color": "#0e1422",
+	"theme_color": "#172033",
+	"icons": [
+		{"src":"./icons/icon-192.png","sizes":"192x192","type":"image/png"},
+		{"src":"./icons/icon-512.png","sizes":"512x512","type":"image/png"}
+	]
+}
