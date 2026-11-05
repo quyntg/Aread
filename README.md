@@ -1,29 +1,28 @@
-# PDF Book Reader Offline — Demo HTML/CSS/JS
+# PDF Book Reader Offline
 
-## Cần bổ sung thư viện (không được đóng gói sẵn)
-Tải bản build trình duyệt của các thư viện và đặt đúng tên:
-- `vendor/pdf.min.js`
-- `vendor/pdf.worker.min.js`
-- `vendor/page-flip.browser.js`
+Ứng dụng web (PWA) đọc PDF offline với hiệu ứng lật trang, thiết kế cho màn hình tương tác Android (landscape, cảm ứng).
 
-Nguồn chính thức:
-- PDF.js: https://github.com/mozilla/pdf.js/releases
-- StPageFlip: https://github.com/Nodlik/StPageFlip/releases
+## Cách hoạt động
+- **Thêm PDF**: bấm "Thêm PDF" → "Chọn file PDF". File được chép vào bộ nhớ riêng của ứng dụng (IndexedDB), nên đọc offline được và không cần cấp quyền thư mục. (Không dùng `showDirectoryPicker()` vì Chrome Android không hỗ trợ.)
+- **Đọc**: chỉ vẽ các trang gần trang đang xem (lười), nên PDF dài vẫn nhẹ RAM. Độ phân giải theo màn hình (tối đa DPR 2).
+- **Tiến độ đọc** lưu theo từng tài liệu; hàng "Đọc tiếp" hiện các file đang đọc dở.
+- **PDF có mật khẩu**: hỏi mật khẩu khi mở (mật khẩu không được lưu).
+- **Xóa**: nút thùng rác trên mỗi tài liệu.
 
-Dùng bản browser build phù hợp. Nếu tên file trong bản tải về khác, đổi tên file hoặc sửa đường dẫn trong `index.html`, `js/app.js`, `service-worker.js`.
+## Thư viện kèm theo (thư mục `vendor/`)
+- `pdf.min.js`, `pdf.worker.min.js` — PDF.js 2.6.347 (giữ bản này cho tương thích Chrome/WebView đời cũ). Đã bật `isEvalSupported:false` để giảm rủi ro CVE-2024-4367. Nếu thiết bị có Chrome mới, nên nâng lên PDF.js ≥ 4.2.67.
+- `page-flip.browser.js` — StPageFlip.
 
-## Chạy thử
-1. Tải đủ thư viện vào `vendor/`.
-2. Đưa thư mục project lên hosting HTTPS (hoặc chạy qua localhost trên máy tính để phát triển).
-3. Mở URL bằng Chrome khi đang có mạng, chờ tải xong tài nguyên và service worker cache.
-4. Chọn Install app / Add to Home screen.
-5. Mở ứng dụng, chọn thư mục PDF và cấp quyền nếu được hỏi.
-6. Chép thêm PDF vào thư mục rồi bấm **Làm mới**.
+## Chạy thử / triển khai
+1. Đưa cả thư mục lên hosting **HTTPS** (hoặc chạy `python3 -m http.server` rồi mở `http://localhost:8000` để thử).
+2. Mở bằng Chrome khi có mạng, chờ service worker cache xong (lần đầu).
+3. Chọn "Cài đặt ứng dụng" / "Thêm vào màn hình chính" nếu có.
+4. Thêm PDF và đọc. Từ lần sau ứng dụng chạy hoàn toàn offline.
 
-## Giới hạn
-- `showDirectoryPicker()` không có mặt trên mọi bản Chrome Android/thiết bị. Cần thử trên máy đích.
-- IndexedDB lưu handle, không bảo đảm quyền truy cập vĩnh viễn. Có thể phải cấp lại quyền.
-- Service worker cache ứng dụng, không tự cache các PDF trong thư mục người dùng.
-- Demo render toàn bộ trang thành canvas trước khi tạo sách, không tối ưu cho PDF nhiều trang/dung lượng lớn.
-- `orientation: landscape` chỉ là gợi ý cho trình cài đặt; không bảo đảm khóa xoay trên mọi launcher.
-- Cần mở ứng dụng lần đầu khi có mạng để cache các tài nguyên.
+Khi sửa code, **tăng `CACHE_NAME`** trong `service-worker.js` để thiết bị cũ nhận bản mới.
+
+## Giới hạn đã biết
+- Dữ liệu nằm trong trình duyệt: xóa dữ liệu trang web/ứng dụng sẽ mất thư viện. Ứng dụng có xin chế độ lưu bền (`navigator.storage.persist()`), nhưng trình duyệt có thể từ chối.
+- Chưa có: tìm chữ trong PDF, mục lục, đánh dấu trang, chọn/sao chép chữ.
+- Phông chữ dùng phông hệ thống của thiết bị (không tải phông ngoài để giữ offline).
+- Zoom làm lại độ phân giải trang theo mức phóng; ở mức 300% các trang rất lớn bị giới hạn ~9 triệu điểm ảnh/trang để tránh hết RAM.

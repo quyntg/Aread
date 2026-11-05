@@ -1,61 +1,443 @@
 <!doctype html>
 <html lang="vi">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#172033">
-  <link rel="manifest" href="./manifest.json">
-  <link rel="stylesheet" href="./css/style.css">
-  <title>PDF Book Reader</title>
-</head>
-<body>
-<header class="topbar">
-  <div class="brand">📚 PDF Book Reader</div>
-  <div class="toolbar">
-    <button id="chooseFolderBtn">Chọn thư mục PDF</button>
-    <button id="refreshBtn" class="secondary">Làm mới</button>
-    <button id="fullscreenBtn" class="secondary">Toàn màn hình</button>
-  </div>
-</header>
-<main>
-  <section id="libraryView" class="library">
-    <div class="intro">
-      <h1>Thư viện tài liệu</h1>
-      <p>Chọn thư mục chứa PDF trên thiết bị. Ứng dụng sẽ thử ghi nhớ thư mục để dùng lại lần sau.</p>
-      <p id="status" class="status" role="status">Chưa chọn thư mục.</p>
-      <button id="permissionBtn" hidden>Cấp lại quyền đọc thư mục</button>
-    </div>
-    <div id="pdfList" class="pdf-grid">
-      <div class="empty">Chưa có tài liệu. Hãy chọn thư mục PDF.</div>
-    </div>
-  </section>
-  <section id="readerView" class="reader" hidden>
-    <div class="reader-head">
-      <button id="backBtn" class="secondary">← Thư viện</button>
-      <div id="currentTitle" class="current-title">Tài liệu PDF</div>
-      <div id="pageInfo" class="page-info">Trang 0 / 0</div>
-    </div>
-    <div class="book-stage">
-      <div id="book" class="book"></div>
-      <div id="loading" class="loading" hidden>Đang tải PDF…</div>
-    </div>
-    <div class="reader-controls">
-      <button id="prevBtn" class="secondary">← Trang trước</button>
-      <label>Trang <input id="pageInput" type="number" min="1" value="1"></label>
-      <button id="goPageBtn" class="secondary">Đi đến</button>
-      <button id="nextBtn">Trang sau →</button>
-    </div>
-  </section>
-</main>
-<footer>PDF được đọc trực tiếp trên thiết bị. Không tải tài liệu lên máy chủ.</footer>
-<script src="./vendor/pdf.min.js"></script>
-<script src="./vendor/page-flip.browser.js"></script>
-<script src="./js/db.js"></script>
-<script src="./js/app.js"></script>
-<script>
-if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
-  window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js").catch(console.error));
-}
-</script>
-</body>
+    <head>
+        <meta charset="utf-8" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1, viewport-fit=cover"
+        />
+        <meta name="theme-color" content="#151b27" />
+        <link rel="manifest" href="./manifest.json" />
+        <link rel="icon" href="./icons/icon-192.png" />
+        <link rel="stylesheet" href="./css/style.css" />
+        <title>PDF Book Reader</title>
+    </head>
+    <body>
+        <!-- 1. Thư viện -->
+        <section id="libraryView" class="view">
+            <header class="bar">
+                <div class="brand">
+                    <span class="logo" aria-hidden="true">
+                        <svg
+                            width="32"
+                            height="32"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <path
+                                d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v15H5.5A1.5 1.5 0 0 0 4 20.5z"
+                            ></path>
+                            <path
+                                d="M20 5.5A1.5 1.5 0 0 0 18.5 4H13v15h5.5a1.5 1.5 0 0 1 1.5 1.5z"
+                            ></path>
+                        </svg>
+                    </span>
+                    <span class="brand-name">PDF Book Reader</span>
+                </div>
+                <label class="search">
+                    <svg
+                        width="28"
+                        height="28"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                    >
+                        <circle cx="11" cy="11" r="7"></circle>
+                        <path d="M20 20l-3.5-3.5"></path>
+                    </svg>
+                    <input
+                        id="searchInput"
+                        type="search"
+                        placeholder="Tìm trong thư viện"
+                        aria-label="Tìm trong thư viện"
+                        autocomplete="off"
+                    />
+                </label>
+                <span class="grow"></span>
+                <button id="addBtn" class="btn primary" type="button">
+                    <svg
+                        width="28"
+                        height="28"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2.4"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                    >
+                        <path d="M12 5v14M5 12h14"></path>
+                    </svg>
+                    Thêm PDF
+                </button>
+            </header>
+
+            <div class="content">
+                <section id="continueSection" hidden>
+                    <h2>Đọc tiếp</h2>
+                    <div id="continueList" class="continue-grid"></div>
+                </section>
+
+                <section>
+                    <div class="section-head">
+                        <h2>
+                            Tất cả tài liệu
+                            <span id="countLabel" class="count"></span>
+                        </h2>
+                        <div class="chips" role="group" aria-label="Sắp xếp">
+                            <button
+                                type="button"
+                                class="chip is-on"
+                                data-sort="recent"
+                                aria-pressed="true"
+                            >
+                                Gần đây
+                            </button>
+                            <button
+                                type="button"
+                                class="chip"
+                                data-sort="name"
+                                aria-pressed="false"
+                            >
+                                Tên A–Z
+                            </button>
+                            <button
+                                type="button"
+                                class="chip"
+                                data-sort="size"
+                                aria-pressed="false"
+                            >
+                                Dung lượng
+                            </button>
+                        </div>
+                    </div>
+                    <div id="docGrid" class="doc-grid"></div>
+                    <div id="emptyBox" class="empty" hidden></div>
+                </section>
+                <!-- <p class="version">Phiên bản 2.3 · 04/11/2026 · đọc lười, cache network-first</p> -->
+            </div>
+        </section>
+
+        <!-- 2. Thêm tài liệu -->
+        <section id="importView" class="view" hidden>
+            <header class="bar">
+                <button
+                    id="importBack"
+                    class="btn secondary back"
+                    type="button"
+                >
+                    <svg
+                        width="32"
+                        height="32"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2.2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                    >
+                        <path d="M15 5l-7 7 7 7"></path>
+                    </svg>
+                    Thư viện
+                </button>
+                <h1>Thêm tài liệu</h1>
+            </header>
+            <div class="import-body">
+                <div class="import-left">
+                    <div class="panel">
+                        <h2>Chọn file từ thiết bị</h2>
+                        <p>
+                            Chọn một hoặc nhiều file PDF. Ứng dụng chép file vào
+                            bộ nhớ riêng để đọc offline, không cần cấp quyền
+                            truy cập thư mục.
+                        </p>
+                        <button
+                            id="pickBtn"
+                            class="btn primary big"
+                            type="button"
+                        >
+                            <svg
+                                width="36"
+                                height="36"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2.4"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                aria-hidden="true"
+                            >
+                                <path d="M12 5v14M5 12h14"></path>
+                            </svg>
+                            Chọn file PDF
+                        </button>
+                        <input
+                            id="fileInput"
+                            type="file"
+                            accept="application/pdf,.pdf"
+                            multiple
+                            hidden
+                        />
+                    </div>
+                    <div id="storagePanel" class="panel" hidden>
+                        <div class="storage-head">
+                            <h3>Bộ nhớ ứng dụng</h3>
+                            <span id="storageText" class="muted"></span>
+                        </div>
+                        <div class="bar-track tall">
+                            <div
+                                id="storageFill"
+                                class="bar-fill"
+                                style="width: 0%"
+                            ></div>
+                        </div>
+                        <div id="storageNote" class="muted small"></div>
+                    </div>
+                </div>
+                <div class="import-right panel">
+                    <h2>Đang thêm vào thư viện</h2>
+                    <div id="queueList" class="queue"></div>
+                    <div class="import-actions">
+                        <button
+                            id="cancelImport"
+                            class="btn secondary"
+                            type="button"
+                        >
+                            Hủy
+                        </button>
+                        <button
+                            id="doneImport"
+                            class="btn primary"
+                            type="button"
+                        >
+                            Xong
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. Đang đọc -->
+        <section id="readerView" class="view reader" hidden>
+            <header class="reader-bar">
+                <button id="backBtn" class="btn secondary back" type="button">
+                    <svg
+                        width="32"
+                        height="32"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2.2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                    >
+                        <path d="M15 5l-7 7 7 7"></path>
+                    </svg>
+                    Thư viện
+                </button>
+                <div id="currentTitle" class="reader-title">Tài liệu PDF</div>
+                <div id="pageInfo" class="page-info" aria-live="polite">
+                    Trang 0 / 0
+                </div>
+                <button
+                    id="fullscreenBtn"
+                    class="icon-btn"
+                    type="button"
+                    aria-label="Toàn màn hình"
+                >
+                    <svg
+                        width="30"
+                        height="30"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                    >
+                        <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"></path>
+                    </svg>
+                </button>
+            </header>
+
+            <div class="stage-wrap">
+                <button
+                    id="prevBtn"
+                    class="flip-btn left"
+                    type="button"
+                    aria-label="Trang trước"
+                >
+                    <svg
+                        width="44"
+                        height="44"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2.2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                    >
+                        <path d="M15 5l-7 7 7 7"></path>
+                    </svg>
+                </button>
+                <div id="stage" class="stage">
+                    <div id="zoomWrap" class="zoom-wrap"></div>
+                </div>
+                <button
+                    id="nextBtn"
+                    class="flip-btn right"
+                    type="button"
+                    aria-label="Trang sau"
+                >
+                    <svg
+                        width="44"
+                        height="44"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2.4"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                    >
+                        <path d="M9 5l7 7-7 7"></path>
+                    </svg>
+                </button>
+                <div id="loading" class="loading" hidden>Đang mở tài liệu…</div>
+            </div>
+
+            <footer class="reader-controls">
+                <div class="zoom">
+                    <button
+                        id="zoomOut"
+                        class="icon-btn"
+                        type="button"
+                        aria-label="Thu nhỏ"
+                    >
+                        <svg
+                            width="28"
+                            height="28"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2.4"
+                            stroke-linecap="round"
+                            aria-hidden="true"
+                        >
+                            <path d="M5 12h14"></path>
+                        </svg>
+                    </button>
+                    <span id="zoomLabel" class="zoom-label">100%</span>
+                    <button
+                        id="zoomIn"
+                        class="icon-btn"
+                        type="button"
+                        aria-label="Phóng to"
+                    >
+                        <svg
+                            width="28"
+                            height="28"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2.4"
+                            stroke-linecap="round"
+                            aria-hidden="true"
+                        >
+                            <path d="M12 5v14M5 12h14"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="slider">
+                    <span class="muted">1</span>
+                    <input
+                        id="pageSlider"
+                        type="range"
+                        min="1"
+                        max="1"
+                        value="1"
+                        aria-label="Chọn trang"
+                    />
+                    <span id="sliderMax" class="muted">1</span>
+                </div>
+                <div class="goto">
+                    <label for="pageInput" class="muted">Đi tới trang</label>
+                    <input
+                        id="pageInput"
+                        type="number"
+                        min="1"
+                        value="1"
+                        inputmode="numeric"
+                    />
+                    <button id="goPageBtn" class="btn secondary" type="button">
+                        Đi
+                    </button>
+                </div>
+            </footer>
+        </section>
+
+        <!-- Hộp thoại dùng chung -->
+        <div id="modal" class="modal" hidden>
+            <div
+                class="modal-card"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="modalTitle"
+            >
+                <h2 id="modalTitle"></h2>
+                <p id="modalText" class="muted"></p>
+                <input
+                    id="modalInput"
+                    type="password"
+                    autocomplete="off"
+                    hidden
+                />
+                <div class="modal-actions">
+                    <button
+                        id="modalCancel"
+                        class="btn secondary"
+                        type="button"
+                    >
+                        Hủy
+                    </button>
+                    <button id="modalOk" class="btn primary" type="button">
+                        OK
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="toast" class="toast" role="status" hidden></div>
+
+        <script src="./vendor/pdf.min.js"></script>
+        <script src="./vendor/page-flip.browser.js"></script>
+        <script src="./js/db.js"></script>
+        <script src="./js/app.js"></script>
+        <script>
+            if (
+                "serviceWorker" in navigator &&
+                location.protocol.startsWith("http")
+            ) {
+                window.addEventListener("load", () =>
+                    navigator.serviceWorker
+                        .register("./service-worker.js", {
+                            updateViaCache: "none",
+                        })
+                        .catch(console.error),
+                );
+            }
+        </script>
+    </body>
 </html>
